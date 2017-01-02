@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <script type="text/javascript" src="javascript/jquery-1.11.1.min.js"></script>
+        <title>GPS Tracking System</title>
+        <style type="text/css">
+            body{margin: 0px;overflow-x:hidden;color: #ffffff;font-weight: bold;font-family: 微软雅黑;}
+            a{text-decoration: none;}
+        </style>
+        <script type="text/javascript">
+            function loginSubmit() {
+                if (checkForm()) {
+                }
+            }
+            function checkForm() {
+                if ($.trim($("#userName").val()) === "") {
+                    $("#userName").focus();
+                    alert("用户名不能为空！");
+                    return false;
+                }
+                if ($("#pwd1").val() === "") {
+                    $("#pwd1").focus();
+                    alert("密码不能为空！");
+                    return false;
+                }
+                return true;
+            }
+            window.onload = function () {
+                $("#btnLogin").bind("click", function () {
+                    loginSubmit();
+                });
+                $("body").bind("keyup", function (event) {
+                    if (event.keyCode === 13) {
+                        loginSubmit();
+                    }
+                });
+
+            };
+        </script>
+    </head>
+    <body>
+        <div style="height: 100%;width: 100%;" id="tableLogin">
+            <div style="background-image: url(images/page_back.jpg);background-repeat: no-repeat;background-position: center center;
+                 background-color: #1d2f33;background-size: cover;background-attachment: fixed;
+                 text-align: center;width: 1920px;min-height: 720px;height: 100%;position: absolute;left: 50%;margin-left: -960px;" >
+                <div style="width: 100%;color: #ffffff;margin-top: 60px;">
+                    <img src="images/logo.png" style="height: 150px;margin-left: 500px;" />
+                </div>
+                <form method="post" action="http://in.gpsoo.net/LoginService?method=loginSystem" id="loginformBase" name="loginformBase">
+                    <div style="width: 100%;margin-top: -20px;height: 480px;">
+                        <div style="width: 480px;height: 53px;line-height: 53px;float: left;"></div>
+                        <table style="height: 53px;line-height: 53px;float: left;">
+                            <tr>
+                                <td></td>
+                                <td><h1>Acount</h1></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td><label>Username:</label></td>
+                                <td><input type="text" name="userName" class="text_login" id="userName" style="background: url(images/input_back.png) no-repeat;border: 0;padding-left: 10px;width: 186px;height: 29px;line-height: 29px;outline: medium;color: #747570;"/></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td><label>Password:</label></td>
+                                <td>
+                                    <input type="password" name="pwd_" class="text_login" id="pwd1" style="background: url(images/input_back.png) no-repeat;border: 0;padding-left: 10px;width: 186px;height: 29px;line-height: 29px;outline: medium;color: #747570;"/>
+                                    <input type="hidden" name="pwd" value="p1" />
+                                    <input type="hidden" name="url" value="http://www.cootrack.net/" />
+                                    <input type="hidden" name="loginType" value="ENTERPRISE" />
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <input style="height: 29px;line-height: 29px;display: block;float: left;" type="checkbox" name="password" class="text_login" id="password" />
+                                    <label style="height: 29px;line-height: 29px;display: block;float: left;">Remember Me</label>
+                                </td>
+                                <td><a style="color: red;height: 29px;line-height: 29px;display: block;float: left;margin-left: 10px;">>>Demo</a></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td colspan="2">
+                                    <a style="background: url(images/login_btn.png) no-repeat;border: 0;margin: 0;width: 71px;height: 29px;line-height: 29px;cursor: pointer;display: block;" />
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="clear: both;float: none;"></div>
+                    </div>
+                </form>
+                <!--<div style="width: 100%;height: 180px;"></div>-->
+                <div style="height: 53px;line-height: 53px;">
+                    <a style="color: #ffffff;" href="https://itunes.apple.com/us/app/id789568297" target="_blank">iPhone</a>
+                    <a style="color: #ffffff;margin-left: 100px;" href="http://download.gpsoo.net/gpsoo/android/car_online.apk" target="_blank">Android</a>
+                    <a style="color: #ffffff;margin-left: 100px;" href="http://www.cootrack.net/open/v1.0/en_dataApi.html" target="_blank">Open API</a>
+                    <a style="color: #ffffff;margin-left: 300px;" href="http://www.gpsoo.net/?locale=zh-cn&back=true">Simplified Chinese</a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+

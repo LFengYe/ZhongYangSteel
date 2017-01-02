@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://tempuri.org/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://tempuri.org/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="http://tempuri.org/">
+      <s:element name="VehnofVerifie">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="vehnof" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="VehnofVerifieResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="VehnofVerifieResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetHistory">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="systemno" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="btime" type="s:string" />
+            <s:element minOccurs="0" maxOccurs="1" name="etime" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="GetHistoryResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" name="GetHistoryResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="VehnofVerifieSoapIn">
+    <wsdl:part name="parameters" element="tns:VehnofVerifie" />
+  </wsdl:message>
+  <wsdl:message name="VehnofVerifieSoapOut">
+    <wsdl:part name="parameters" element="tns:VehnofVerifieResponse" />
+  </wsdl:message>
+  <wsdl:message name="GetHistorySoapIn">
+    <wsdl:part name="parameters" element="tns:GetHistory" />
+  </wsdl:message>
+  <wsdl:message name="GetHistorySoapOut">
+    <wsdl:part name="parameters" element="tns:GetHistoryResponse" />
+  </wsdl:message>
+  <wsdl:portType name="GpsWebServiceSoap">
+    <wsdl:operation name="VehnofVerifie">
+      <wsdl:input message="tns:VehnofVerifieSoapIn" />
+      <wsdl:output message="tns:VehnofVerifieSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetHistory">
+      <wsdl:input message="tns:GetHistorySoapIn" />
+      <wsdl:output message="tns:GetHistorySoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="GpsWebServiceSoap" type="tns:GpsWebServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="VehnofVerifie">
+      <soap:operation soapAction="http://tempuri.org/VehnofVerifie" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetHistory">
+      <soap:operation soapAction="http://tempuri.org/GetHistory" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:binding name="GpsWebServiceSoap12" type="tns:GpsWebServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="VehnofVerifie">
+      <soap12:operation soapAction="http://tempuri.org/VehnofVerifie" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetHistory">
+      <soap12:operation soapAction="http://tempuri.org/GetHistory" style="document" />
+      <wsdl:input>
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="GpsWebService">
+    <wsdl:port name="GpsWebServiceSoap" binding="tns:GpsWebServiceSoap">
+      <soap:address location="http://221.204.213.71/zygpsservice/gpswebservice.asmx" />
+    </wsdl:port>
+    <wsdl:port name="GpsWebServiceSoap12" binding="tns:GpsWebServiceSoap12">
+      <soap12:address location="http://221.204.213.71/zygpsservice/gpswebservice.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
