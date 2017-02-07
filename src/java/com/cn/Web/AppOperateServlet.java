@@ -109,6 +109,9 @@ public class AppOperateServlet extends HttpServlet {
         String json = null;
         boolean DESFlag = false;
         HttpSession session = request.getSession(false);
+        long timestamp = Long.valueOf(request.getHeader("timestamp"));
+        System.out.println("timestamp:" + timestamp);
+        
         try {
             //System.out.println(subUri + ", params is:" + params);
 
@@ -140,10 +143,10 @@ public class AppOperateServlet extends HttpServlet {
             JSONObject paramsJson = null;
             try {
                 paramsJson = JSONObject.parseObject(EncryptUtil.decryptDES(params));
-                LOG.info("解密后的数据:" + paramsJson);
+                System.out.println("接口:" + subUri + "解密后的数据:" + paramsJson);
                 DESFlag = true;
             } catch (Exception e) {
-                LOG.info("解密异常!");
+                LOG.info("接口:" + subUri + "解密异常!");
                 paramsJson = null;
 //                paramsJson = JSONObject.parseObject(params);
                 DESFlag = false;
@@ -857,6 +860,7 @@ public class AppOperateServlet extends HttpServlet {
                     break;
                 }
                 //</editor-fold>
+                
                 //<editor-fold defaultstate="collapsed" desc="registerEnterpirse">
                 case "registerEnterpirse": {
                     //int type = Integer.valueOf((null != paramsJson.getString("type")) ? paramsJson.getString("type") : "-1");
@@ -1681,7 +1685,7 @@ public class AppOperateServlet extends HttpServlet {
                     break;
             }
         } catch (Exception e) {
-            LOG.error(subUri, e);
+            LOG.error(subUri + "输入参数错误", e);
             json = Units.objectToJson(-1, "输入参数错误!", e.toString());
         }
 

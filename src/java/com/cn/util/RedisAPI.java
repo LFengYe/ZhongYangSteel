@@ -7,8 +7,6 @@ package com.cn.util;
 
 import java.io.IOException;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -79,14 +77,14 @@ public class RedisAPI {
                 //释放redis对象
                 if (null != pool)
                     pool.returnBrokenResource(jedis);
-                LOG.error("", e);
+                LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
                 returnResource(pool, jedis);
             }
             return value;
         } catch (IOException ex) {
-            LOG.error("", ex);
+            LOG.error("Redis配置文件读取错误", ex);
         }
         return null;
     }
@@ -105,13 +103,13 @@ public class RedisAPI {
                 //释放redis对象
                 if (null != pool)
                     pool.returnBrokenResource(jedis);
-                LOG.error("", e);
+                LOG.error("Redis写入出错", e);
             } finally {
                 //返还到连接池
                 returnResource(pool, jedis);
             }
         } catch (IOException ex) {
-            LOG.error("", ex);
+            LOG.error("Redis配置文件读取错误", ex);
         }
         return null;
     }

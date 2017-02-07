@@ -10,20 +10,27 @@ package com.cn.entity;
  * @author LFeng
  */
 public class LoginUser {
+    /** 用户ID*/
     private int userID;
-    /**
-     * 1 -- 企业用户 | 2 -- 司机 | 3 -- 经销商 | 4 -- 运输处
-     */
+    /** 1 -- 企业用户 | 2 -- 司机 | 3 -- 经销商 | 4 -- 运输处*/
     private int userType;
+    /** 用户登陆名称*/
     private String loginName;
+    /** 用户登陆时间*/
     private String loginTime;
+    /** 用户IMEI*/
     private String imei;
+    /** 用户最后一次操作时间*/
     private String lastOperateTime;
+    /** 用户IMEI更新时间*/
     private String updateTime;
-    
+    /** 用户手机号码*/
     private String phoneNum;
+    /** 用户地址*/
     private String address;
+    /** 用户公司名称*/
     private String company;
+    /** 用户认证状态*/
     private int authStatus;
     
     public int enterpriseType;
