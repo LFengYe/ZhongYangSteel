@@ -25,9 +25,8 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -35,6 +34,8 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class Units {
 
+    private static Logger logger = Logger.getLogger(Units.class); 
+    
     /**
      * 验证码序列
      */
@@ -349,7 +350,7 @@ public class Units {
             URL url = new URL(httpUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-type", "application/json");
+//            connection.setRequestProperty("Content-type", "application/json");
             connection.setDoInput(true);
             connection.setDoOutput(true);
             connection.connect();
@@ -368,7 +369,7 @@ public class Units {
                 String strRead;
                 while ((strRead = reader.readLine()) != null) {
                     sbf.append(strRead);
-                    sbf.append("\r\n");
+//                    sbf.append("\r\n");
                 }
                 reader.close();
                 result = sbf.toString();
@@ -377,7 +378,7 @@ public class Units {
 //                System.out.println(connection.getResponseCode() + ",message:" + connection.getResponseMessage());
             }
         } catch (IOException e) {
-            Logger.getLogger(Units.class.getName()).log(Level.SEVERE, null, e);
+            logger.error("", e);
         }
 
         return null;
@@ -721,5 +722,77 @@ public class Units {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+    
+    /** 
+     * 获取请求主机IP地址,如果通过代理进来，则透过防火墙获取真实IP地址; 
+     *  
+     * @param request 
+     * @return 
+     * @throws IOException 
+     */  
+    
+    public final static String getRealIpAddress(HttpServletRequest request) throws IOException {
+        // 获取请求主机IP地址,如果通过代理进来，则透过防火墙获取真实IP地址  
+  
+        String ip = request.getHeader("X-Forwarded-For"); 
+  
+        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+            if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+                ip = request.getHeader("Proxy-Client-IP");
+            }  
+            if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+                ip = request.getHeader("WL-Proxy-Client-IP"); 
+            }  
+            if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+                ip = request.getHeader("HTTP_CLIENT_IP");
+            }  
+            if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+                ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+            }  
+            if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {  
+                ip = request.getRemoteAddr();
+            }
+        } else if (ip.length() > 15) {
+            String[] ips = ip.split(",");  
+            for (int index = 0; index < ips.length; index++) {  
+                String strIp = (String) ips[index];  
+                if (!("unknown".equalsIgnoreCase(strIp))) {  
+                    ip = strIp;  
+                    break;  
+                }  
+            }  
+        }  
+        return ip;  
+    }
+    
+    //方差s^2=[(x1-x)^2 +...(xn-x)^2]/n  
+    public static double Variance(double[] x) {
+        int m = x.length;
+        double sum = 0;
+        for (int i = 0; i < m; i++) {//求和  
+            sum += x[i];
+        }
+        double dAve = sum / m;//求平均值  
+        double dVar = 0;
+        for (int i = 0; i < m; i++) {//求方差  
+            dVar += (x[i] - dAve) * (x[i] - dAve);
+        }
+        return dVar / m;
+    }
+
+    //标准差σ=sqrt(s^2)  
+    public static double StandardDiviation(double[] x) {
+        int m = x.length;
+        double sum = 0;
+        for (int i = 0; i < m; i++) {//求和  
+            sum += x[i];
+        }
+        double dAve = sum / m;//求平均值  
+        double dVar = 0;
+        for (int i = 0; i < m; i++) {//求方差  
+            dVar += (x[i] - dAve) * (x[i] - dAve);
+        }
+        return Math.sqrt(dVar / m);
     }
 }

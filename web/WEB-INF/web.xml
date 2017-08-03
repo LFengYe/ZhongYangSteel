@@ -32,6 +32,10 @@
         <servlet-name>TestBlockingQueueServlet</servlet-name>
         <servlet-class>com.cn.Web.TestBlockingQueueServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>GetVerificationCodeServlet</servlet-name>
+        <servlet-class>com.cn.Web.GetVerificationCodeServlet</servlet-class>
+    </servlet>
     <servlet-mapping>
         <servlet-name>AppOperateServlet</servlet-name>
         <url-pattern>*.AppOperate</url-pattern>
@@ -51,6 +55,10 @@
     <servlet-mapping>
         <servlet-name>TestBlockingQueueServlet</servlet-name>
         <url-pattern>/TestBlockingQueueServlet</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>GetVerificationCodeServlet</servlet-name>
+        <url-pattern>/VerificationCode.do</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

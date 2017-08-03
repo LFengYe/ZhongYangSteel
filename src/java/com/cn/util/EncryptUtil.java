@@ -1,9 +1,10 @@
 package com.cn.util;
 
-import com.google.gson.JsonObject;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -14,13 +15,27 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class EncryptUtil {
 
+    /*
+    public static void main(String[] args) {
+        try {
+            String decode = "DX75f3+i3Mbg+V3mQNojLQBTa1mMaIZd1ImsFMCFL22hemYa0dooagrHjQUdkk2Dut75bLY0q74tNmaZeXgBnA==";
+            System.out.println(decryptDES(decode, null));
+        } catch (Exception ex) {
+            Logger.getLogger(EncryptUtil.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    */
+    
     /**
      * 加密
      * @param encryptString
+     * @param password
      * @return 
      */
-    public static String encryptDES(String encryptString) {
-        String encryptKey = "12345678";
+    public static String encryptDES(String encryptString, String password) {
+        String encryptKey = "92837462";
+        if (password != null)
+            encryptKey = password;
         //返回实现指定转换的 Cipher 对象	“算法/模式/填充”
         Cipher cipher = null;
         Map<String, String> map = new HashMap<>();
@@ -48,11 +63,14 @@ public class EncryptUtil {
     /**
      * 解密
      * @param decodeString
+     * @param password
      * @return
      * @throws Exception 
      */
-    public static String decryptDES(String decodeString) throws Exception {
-        String decodeKey = "12345678";
+    public static String decryptDES(String decodeString, String password) throws Exception {
+        String decodeKey = "92837462";
+        if (password != null)
+            decodeKey = password;
         //使用指定密钥构造IV
         IvParameterSpec iv = new IvParameterSpec(decodeKey.getBytes());
         //根据给定的字节数组和指定算法构造一个密钥。

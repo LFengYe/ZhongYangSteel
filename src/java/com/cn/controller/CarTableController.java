@@ -434,6 +434,41 @@ public class CarTableController {
         }
         return result;
     }
+    
+    /**
+     * 修改车辆使用状态
+     * @param carID
+     * @param useStatus
+     * @return 
+     */
+    public int updateCarUseStatus(int carID, int useStatus) {
+        DatabaseOpt opt = new DatabaseOpt();
+        Connection conn = opt.getConnect();
+        CallableStatement statement = null;
+        int result = -1;
+        try {
+            statement = conn.prepareCall("{call tbCarTableUseStatusUpdate(?, ?, ?)}");
+            statement.setInt("_carID", carID);
+            statement.setInt("_useStatus", useStatus);
+            statement.registerOutParameter("result", Types.INTEGER);
+            statement.executeUpdate();
+            result = statement.getInt("result");
+        } catch (SQLException ex) {
+            Logger.getLogger(CarTableController.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            try {
+                if (statement != null) {
+                    statement.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(CarTableController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        return result;
+    }
 
     /**
      * 根据车辆ID, 获取车辆位置信息

@@ -10,6 +10,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.cn.controller.CarTableController;
 import com.cn.controller.CarrierController;
+import com.cn.controller.DestinationDisController;
 import com.cn.controller.DistributorController;
 import com.cn.controller.DriverController;
 import com.cn.controller.EnterpriseController;
@@ -24,6 +25,8 @@ import com.cn.entity.AccessFrequency;
 import com.cn.entity.CarLocation;
 import com.cn.entity.CarTable;
 import com.cn.entity.CarrierInfo;
+import com.cn.entity.DestinationDis;
+import com.cn.entity.DeviceIpAddress;
 import com.cn.entity.Distributor;
 import com.cn.entity.Driver;
 import com.cn.entity.Enterprise;
@@ -39,6 +42,7 @@ import com.cn.entity.Version;
 import com.cn.util.CarNumberVerifie;
 import com.cn.util.Constants;
 import com.cn.util.EncryptUtil;
+import com.cn.util.RedisAPI;
 import com.cn.util.Units;
 import com.cn.webService.client.GpsWebService;
 import com.mysql.jdbc.StringUtils;
@@ -48,6 +52,7 @@ import java.io.PrintWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -73,6 +78,14 @@ public class AppOperateServlet extends HttpServlet {
     private static CopyOnWriteArrayList<AccessFrequency> frequencys;
     private static CopyOnWriteArrayList<AccessFrequency> grabFrequencys;
     private int minLimitTime;//最小时间间隔,单位毫秒
+    private int changeTimes;
+    /**
+     * 抢单阻塞时间: 根据抢单成功率来确定阻塞时间的长短, %0~ 10%阻塞时间为0, %10%~20%阻塞时间为500ms,
+     * %20%~30%阻塞时间为1000ms, %30%~40%阻塞时间为1500ms, %40%~50%阻塞时间为2000ms,
+     * %50%~60%阻塞时间为2500ms, %60%~70%阻塞时间为3000ms, %70%~80%阻塞时间为3500ms,
+     * %80%~90%阻塞时间为4000ms, %90%~100%阻塞时间为4500ms,
+     */
+    private int waitTime[] = {0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500};
     private static final SerializerFeature[] features = {SerializerFeature.WriteMapNullValue, SerializerFeature.WriteNullNumberAsZero,
         SerializerFeature.WriteNullBooleanAsFalse, SerializerFeature.WriteNullStringAsEmpty, SerializerFeature.WriteNullListAsEmpty};
 
@@ -84,6 +97,7 @@ public class AppOperateServlet extends HttpServlet {
             Properties prop = new Properties();
             prop.load(AppOperateServlet.class.getClassLoader().getResourceAsStream("./config.properties"));
             minLimitTime = Integer.valueOf(prop.getProperty("minLimitTime", "500"));
+            changeTimes = Integer.valueOf(prop.getProperty("changeTimes", "10"));
             frequencys = new CopyOnWriteArrayList<>();
             grabFrequencys = new CopyOnWriteArrayList<>();
         } catch (IOException ex) {
@@ -108,49 +122,46 @@ public class AppOperateServlet extends HttpServlet {
                 uri.lastIndexOf("."));
         String json = null;
         boolean DESFlag = false;
-        HttpSession session = request.getSession(false);
-        long timestamp = Long.valueOf(request.getHeader("timestamp"));
-        System.out.println("timestamp:" + timestamp);
-        
-        try {
-            //System.out.println(subUri + ", params is:" + params);
+        HttpSession session = request.getSession();
+//        long timestamp = Long.valueOf(request.getHeader("timestamp"));
+//        System.out.println("timestamp:" + timestamp);
 
-            //控制同一个IP对同一个接口的访问频率
-            String ipAddress = Units.getIpAddress(request);
-            AccessFrequency exitsFrequency = isHasHostIP(ipAddress, frequencys);
-            if (null != exitsFrequency) {
-                long nowTime = new Date().getTime();
-                if (nowTime - exitsFrequency.getAccessTime() < minLimitTime
-                        && exitsFrequency.getInterfaceName().compareTo(subUri) == 0) {
-                    //如果同一个已存在的IP上次访问同一个接口的时间小于最小时间限制(现是500ms)
-                    LOG.info("丢掉" + ipAddress + "对接口" + subUri + "的访问");
-                    return;
-                } else {
-                    exitsFrequency.setAccessTime(nowTime);
-                    exitsFrequency.setInterfaceName(subUri);
+        try {
+
+            /*验证是否登陆*/
+            if (!"login".equals(subUri) && !"getNewestVersion".equals(subUri)
+                    && !"getSMSVerifyCode".equals(subUri) && !"registerEnterpirse".equals(subUri)
+                    && !"getUserInfo".equals(subUri) && session.getAttribute("user") == null) {
+                session.invalidate();
+                json = Units.objectToJson(404, "未登陆或登录已超时", null);
+                PrintWriter out = response.getWriter();
+                try {
+                    response.setContentType("text/html;charset=UTF-8");
+                    response.setHeader("Cache-Control", "no-store");
+                    response.setHeader("Pragma", "no-cache");
+                    response.setDateHeader("Expires", 0);
+                    out.print(EncryptUtil.encryptDES(json, "900819ye"));
+                } finally {
+                    out.close();
                 }
-            } else {
-                AccessFrequency frequency = new AccessFrequency();
-                frequency.setIpAddress(ipAddress);
-                frequency.setAccessTime(new Date().getTime());
-                frequency.setOverLimitcount(0);
-                frequency.setIsEnable(true);
-                frequency.setInterfaceName(subUri);
-                frequencys.add(frequency);
+                return;
             }
 
             //将字符串转换为json
-            JSONObject paramsJson = null;
+            JSONObject paramsJson;
             try {
-                paramsJson = JSONObject.parseObject(EncryptUtil.decryptDES(params));
-                System.out.println("接口:" + subUri + "解密后的数据:" + paramsJson);
+                if (subUri.compareTo("getNewestVersion") == 0) {
+                    paramsJson = JSONObject.parseObject(EncryptUtil.decryptDES(params, null));
+                } else {
+                    paramsJson = JSONObject.parseObject(EncryptUtil.decryptDES(params, "900819ye"));
+                }
                 DESFlag = true;
             } catch (Exception e) {
-                LOG.info("接口:" + subUri + "解密异常!");
                 paramsJson = null;
-//                paramsJson = JSONObject.parseObject(params);
                 DESFlag = false;
             }
+            
+            System.out.println(subUri + ", params is:" + paramsJson);
 
             if (paramsJson == null) {
                 json = Units.objectToJson(-1, "输入参数错误!", null);
@@ -161,7 +172,7 @@ public class AppOperateServlet extends HttpServlet {
                     response.setHeader("Pragma", "no-cache");
                     response.setDateHeader("Expires", 0);
                     if (DESFlag) {
-                        out.print(EncryptUtil.encryptDES(json));
+                        out.print(EncryptUtil.encryptDES(json, "900819ye"));
                     } else {
                         out.print(json);
                     }
@@ -173,7 +184,52 @@ public class AppOperateServlet extends HttpServlet {
                 return;
             }
 
+            String ipAddress = Units.getRealIpAddress(request);
+            //设备识别号
             String imei = paramsJson.getString("IMEI");
+
+            if (subUri.compareTo("getNewestVersion") != 0 && !isFrequencyCanAccess(ipAddress, subUri)) {
+                json = Units.objectToJson(-1, "请勿频繁刷新!", null);
+                PrintWriter out = response.getWriter();
+                try {
+                    response.setContentType("text/html;charset=UTF-8");
+                    response.setHeader("Cache-Control", "no-store");
+                    response.setHeader("Pragma", "no-cache");
+                    response.setDateHeader("Expires", 0);
+                    if (DESFlag) {
+                        out.print(EncryptUtil.encryptDES(json, "900819ye"));
+                    } else {
+                        out.print(json);
+                    }
+                } finally {
+                    if (out != null) {
+                        out.close();
+                    }
+                }
+                return;
+            }
+
+            if (!checkIpAddressChangeTimes(imei, ipAddress)) {
+                json = Units.objectToJson(-1, "设备访问受限!", null);
+                PrintWriter out = response.getWriter();
+                try {
+                    response.setContentType("text/html;charset=UTF-8");
+                    response.setHeader("Cache-Control", "no-store");
+                    response.setHeader("Pragma", "no-cache");
+                    response.setDateHeader("Expires", 0);
+                    if (DESFlag) {
+                        out.print(EncryptUtil.encryptDES(json, "900819ye"));
+                    } else {
+                        out.print(json);
+                    }
+                } finally {
+                    if (out != null) {
+                        out.close();
+                    }
+                }
+                return;
+            }
+
             switch (subUri) {
                 case "test": {
                     Date date = new Date();
@@ -230,7 +286,9 @@ public class AppOperateServlet extends HttpServlet {
                     int taskID = Integer.valueOf((null != paramsJson.getString("taskID")) ? paramsJson.getString("taskID") : "0");
                     int versionNum = Integer.valueOf((null != paramsJson.getString("versionNum")) ? paramsJson.getString("versionNum") : "-1");
                     long grabTime = Long.valueOf((null != paramsJson.getString("grabTime")) ? paramsJson.getString("grabTime") : "0");
-                    AccessFrequency grabFrequency = isHasHostIP(ipAddress, grabFrequencys);
+
+                    /*
+                    AccessFrequency grabFrequency = isHasHostIP(ipAddress, subUri, grabFrequencys);
                     if (grabFrequency != null) {
                         if (grabTime <= grabFrequency.getAccessTime()) {
                             LOG.error("grabTime:" + grabTime + ",previousGrabTime:" + grabFrequency.getAccessTime());
@@ -246,12 +304,13 @@ public class AppOperateServlet extends HttpServlet {
                         frequency.setUserID(userID);
                         grabFrequencys.add(frequency);
                     }
-                    
-                    if (versionNum >= 10) {
+                     */
+                    if (versionNum >= 14) {
                         CarTableController carTableController = new CarTableController();
                         CarLocation location = carTableController.getCarLocationWithID(carID);
                         float latitude = location.getLatitude();
                         float longitude = location.getLongitude();
+                        String gpsTime = location.getGpsTime();
                         OrderTableController tableController = new OrderTableController();
                         OrderTable orderTable = tableController.getTaskDetailWithSerial("", taskID);
                         SiteTableController siteTableController = new SiteTableController();
@@ -260,9 +319,17 @@ public class AppOperateServlet extends HttpServlet {
                         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
                         try {
                             Date sendTime = df.parse(orderTable.getSendTime());
+                            Date gpsDate = df.parse(gpsTime);
+                            Date nowDate = new Date();
+
+                            if (nowDate.getTime() - sendTime.getTime() < 5 * 1000) {
+                                LOG.info("sendTime:" + orderTable.getSendTime() + ",grabTime:" + df.format(nowDate) + ",data:" + paramsJson);
+                                //Thread.sleep(3 * 1000);
+                            }
                             if (!Units.isToday(sendTime)) {
                                 json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_EXPIRED, "订单已失效", null);
-                            } else if (latitude < 0.1 || longitude < 0.1) {
+                            } else if (latitude < 0.1 || longitude < 0.1 || (nowDate.getTime() - gpsDate.getTime() > offlineTime)) {
+                                //System.out.println("lat:" + latitude + ",lon:" + longitude + ",now:" + nowDate.getTime() + ",gps:" + gpsDate.getTime());
                                 json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_EXCEPTION, "定位异常", null);
                             } else if (orderTable.getCarRenge() * 1000 < Units.GetDistance(longitude, latitude, startSite.getSiteLongitude(), startSite.getSiteLatitude())) {
                                 json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_EXCEPTION, "不在抢单区域内", null);
@@ -309,15 +376,15 @@ public class AppOperateServlet extends HttpServlet {
                                             break;
                                         }
                                         case Constants.GRAB_ORDER_STATUS_CAR_UNAUTH: {
-                                            json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_CARTYPE_ERROR, "车辆未认证", null);
+                                            json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_CAR_UNAUTH, "车辆未认证", null);
                                             break;
                                         }
                                         case Constants.GRAB_ORDER_STATUS_DRIVER_UNAUTH: {
-                                            json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_CARTYPE_ERROR, "司机未认证", null);
+                                            json = Units.objectToJson(Constants.GRAB_ORDER_STATUS_DRIVER_UNAUTH, "司机未认证", null);
                                             break;
                                         }
                                         default: {
-                                            json = Units.objectToJson(result, "抢单出错, 请联系管理员!", null);
+                                            json = Units.objectToJson(result, "抢单出错!", null);
                                         }
                                     }
                                 }
@@ -495,85 +562,93 @@ public class AppOperateServlet extends HttpServlet {
                  */
                 //<editor-fold defaultstate="collapsed" desc="login">
                 case "login": {
-                    //获取用户名
-                    String username = paramsJson.getString("username");
-                    //获取密码
-                    String password = paramsJson.getString("password");
-                    //获取其类型
-                    String type = paramsJson.getString("type");
-                    //获取手机别名
-                    //String imei = paramsJson.getString("IMEI");
+                    String imageCode = paramsJson.getString("imageCode");
+                    if (imageCode != null && imageCode.compareTo(String.valueOf(session.getAttribute("imageCode"))) == 0) {
+                        session.removeAttribute("imageCode");
+                        //获取用户名
+                        String username = paramsJson.getString("username");
+                        //获取密码
+                        String password = paramsJson.getString("password");
+                        //获取其类型
+                        String type = paramsJson.getString("type");
+                        //获取手机别名
+                        //String imei = paramsJson.getString("IMEI");
 //                    String ipAddress = Units.getIpAddress(request);
 
-                    LoginUser loginUser = new LoginUser();
-                    int result = -1;
+                        LoginUser loginUser = new LoginUser();
+                        int result = -1;
 
-                    //<editor-fold defaultstate="collapsed" desc="判断不同类型的登录用户">
-                    switch (type) {
-                        case "distributor": {
-                            //经销商
-                            DistributorController controller = new DistributorController();
-                            result = controller.distributorLogin(username, password, imei, ipAddress);
-                            if (result == 0 || result == 2) {
-                                Distributor user = controller.distributorGetWithUsername(username);
-                                loginUser.setUserType(3);
-                                loginUser.setUserID(user.getDistributorID());
-                                loginUser.setLoginName(user.getDistributorUserName());
-                                loginUser.setCompany(user.getDistributorName());
-                                loginUser.setAddress(user.getDistributorAddress());
-                                loginUser.setCompany(user.getDistributorCompany());
-                                loginUser.setPhoneNum(user.getDistributorPhoneNumber());
-                                loginUser.setImei(user.getLoginImei());
+                        //<editor-fold defaultstate="collapsed" desc="判断不同类型的登录用户">
+                        switch (type) {
+                            case "distributor": {
+                                //经销商
+                                DistributorController controller = new DistributorController();
+                                result = controller.distributorLogin(username, password, imei, ipAddress);
+                                if (result == 0 || result == 2) {
+                                    Distributor user = controller.distributorGetWithUsername(username);
+                                    loginUser.setUserType(3);
+                                    loginUser.setUserID(user.getDistributorID());
+                                    loginUser.setLoginName(user.getDistributorUserName());
+                                    loginUser.setCompany(user.getDistributorName());
+                                    loginUser.setAddress(user.getDistributorAddress());
+                                    loginUser.setCompany(user.getDistributorCompany());
+                                    loginUser.setPhoneNum(user.getDistributorPhoneNumber());
+                                    loginUser.setImei(user.getLoginImei());
+                                }
+                                break;
                             }
-                            break;
-                        }
-                        case "enterprise": {
-                            //企业用户
-                            EnterpriseController controller = new EnterpriseController();
-                            result = controller.enterpriseLogin(username, password, imei, ipAddress);
-                            if (result == 0 || result == 2) {
-                                Enterprise user = controller.enterpriseGetWithUserName(username);
-                                loginUser.setUserType(1);
-                                loginUser.setUserID(user.getEnterpriseID());
-                                loginUser.setLoginName(user.getEnterpriseUserName());
-                                loginUser.setAddress(user.getEnterpriseAddress());
-                                loginUser.setCompany(user.getCarrierName());
-                                loginUser.setPhoneNum(user.getEnterprisePhoneNumber());
-                                loginUser.setAuthStatus(user.getAuthStatus());
-                                loginUser.setImei(user.getLoginImei());
+                            case "enterprise": {
+                                //企业用户
+                                EnterpriseController controller = new EnterpriseController();
+                                result = controller.enterpriseLogin(username, password, imei, ipAddress);
+                                if (result == 0 || result == 2) {
+                                    Enterprise user = controller.enterpriseGetWithUserName(username);
+                                    loginUser.setUserType(1);
+                                    loginUser.setUserID(user.getEnterpriseID());
+                                    loginUser.setLoginName(user.getEnterpriseUserName());
+                                    loginUser.setAddress(user.getEnterpriseAddress());
+                                    loginUser.setCompany(user.getCarrierName());
+                                    loginUser.setPhoneNum(user.getEnterprisePhoneNumber());
+                                    loginUser.setAuthStatus(user.getAuthStatus());
+                                    loginUser.setImei(user.getLoginImei());
+                                }
+                                break;
                             }
-                            break;
-                        }
-                        case "driver": {
-                            // 司机登录
-                            DriverController controller = new DriverController();
-                            result = controller.driverLogin(username, password, imei, ipAddress);
-                            if (result == 0 || result == 2) {
-                                Driver user = controller.driverGetWithUserName(username);
-                                loginUser.setUserType(2);
-                                loginUser.setUserID(user.getDriverID());
-                                loginUser.setLoginName(user.getdUserName());
-                                loginUser.setAddress("");
-                                loginUser.setCompany(user.getEnterpriseName());
-                                loginUser.setPhoneNum(user.getdPhoneNumber());
-                                loginUser.setImei(user.getLoginImei());
+                            case "driver": {
+                                // 司机登录
+                                DriverController controller = new DriverController();
+                                result = controller.driverLogin(username, password, imei, ipAddress);
+                                if (result == 0 || result == 2) {
+                                    Driver user = controller.driverGetWithUserName(username);
+                                    loginUser.setUserType(2);
+                                    loginUser.setUserID(user.getDriverID());
+                                    loginUser.setLoginName(user.getdUserName());
+                                    loginUser.setAddress("");
+                                    loginUser.setCompany(user.getEnterpriseName());
+                                    loginUser.setPhoneNum(user.getdPhoneNumber());
+                                    loginUser.setImei(user.getLoginImei());
+                                }
+                                break;
                             }
-                            break;
+                            default:
+                                //类型参数错误
+                                break;
                         }
-                        default:
-                            //类型参数错误
-                            break;
-                    }
-                    //</editor-fold>
+                        //</editor-fold>
 
-                    if (result == 0) {
-                        json = Units.objectToJson(result, "登录成功!", loginUser);
-                    } else if (result == 2) {
-                        json = Units.objectToJson(result, "不同设备登录!", loginUser);
-                    } else if (result == 1) {
-                        json = Units.objectToJson(result, "用户名或密码错误!", null);
+                        if (result == 0) {
+                            session.setAttribute("user", loginUser);
+                            json = Units.objectToJson(result, "登录成功!", loginUser);
+                        } else if (result == 2) {
+                            session.setAttribute("user", loginUser);
+                            json = Units.objectToJson(result, "不同设备登录!", loginUser);
+                        } else if (result == 1) {
+                            json = Units.objectToJson(result, "用户名或密码错误!", null);
+                        } else {
+                            json = Units.objectToJson(result, "登录出错!", null);
+                        }
                     } else {
-                        json = Units.objectToJson(result, "登录出错!", null);
+                        json = Units.objectToJson(-1, "验证码输入错误!", null);
                     }
 //                    System.out.println("json:" + json);
                     //<editor-fold defaultstate="collapsed" desc="登录信息验证成功">
@@ -783,13 +858,19 @@ public class AppOperateServlet extends HttpServlet {
                 case "getDeviceSwitchSMSVerifyCode": {
                     String phoneNum = paramsJson.getString("phoneNum");
                     if (!StringUtils.isEmptyOrWhitespaceOnly(phoneNum)) {
-                        String phoneCode = Units.createOnlyNumPhoneValidateCode(4);
-                        json = Units.sendSMSVerificationCode(phoneNum, phoneCode, Constants.SMS_PLATFORM_NEW_DEVICE_TEMPLATE_ID, Constants.SMS_NEW_DEVICE_EXPIRED_MINUTE);
-                        if (session == null) {
-                            session = request.getSession(true);
+                        Calendar calendar = Calendar.getInstance();
+                        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+                        if (hour >= 20) {
+                            String phoneCode = Units.createOnlyNumPhoneValidateCode(4);
+                            json = Units.sendSMSVerificationCode(phoneNum, phoneCode, Constants.SMS_PLATFORM_NEW_DEVICE_TEMPLATE_ID, Constants.SMS_NEW_DEVICE_EXPIRED_MINUTE);
+                            if (session == null) {
+                                session = request.getSession(true);
+                            }
+                            session.setAttribute("phoneCode", phoneCode);
+                            session.setMaxInactiveInterval(120 * 60);
+                        } else {
+                            json = Units.objectToJson(-1, "请在21:00之后切换设备", null);
                         }
-                        session.setAttribute("phoneCode", phoneCode);
-                        session.setMaxInactiveInterval(120 * 60);
                     } else {
                         json = Units.objectToJson(-1, "手机号不能为空", null);
                     }
@@ -860,7 +941,7 @@ public class AppOperateServlet extends HttpServlet {
                     break;
                 }
                 //</editor-fold>
-                
+
                 //<editor-fold defaultstate="collapsed" desc="registerEnterpirse">
                 case "registerEnterpirse": {
                     //int type = Integer.valueOf((null != paramsJson.getString("type")) ? paramsJson.getString("type") : "-1");
@@ -1665,7 +1746,28 @@ public class AppOperateServlet extends HttpServlet {
                     }
                     break;
                 }
-            //</editor-fold>
+                //</editor-fold>
+
+                /**
+                 * *******************************目的地描述************************************
+                 */
+                //<editor-fold defaultstate="collapsed" desc="getDestinationDis">
+                case "getDestinationDis": {
+                    int disID = Integer.valueOf((null != paramsJson.getString("disID")) ? paramsJson.getString("disID") : "-1");
+                    String disSerial = paramsJson.getString("disSerial");
+                    String disName = paramsJson.getString("disName");
+                    int nowPage = Integer.valueOf((null != paramsJson.getString("nowPage")) ? paramsJson.getString("nowPage") : "0");
+                    int pageSize = Integer.valueOf((null != paramsJson.getString("pageSize")) ? paramsJson.getString("pageSize") : "0");
+                    DestinationDisController controller = new DestinationDisController();
+                    ArrayList<DestinationDis> result = controller.destinationDisGet(disID, disSerial, disName, nowPage, pageSize);
+                    if (null != result) {
+                        json = Units.listToJson(result, 0);
+                    } else {
+                        json = Units.objectToJson(-1, "记录为空", null);
+                    }
+                    break;
+                }
+                //</editor-fold>
 
                 //<editor-fold defaultstate="collapsed" desc="getNewestVersion">
                 case "getNewestVersion": {
@@ -1677,10 +1779,10 @@ public class AppOperateServlet extends HttpServlet {
                     } else {
                         json = Units.objectToJson(-1, "服务器无版本更新", null);
                     }
+                    //System.out.println("json:" + json);
                     break;
                 }
                 //</editor-fold>
-
                 default:
                     break;
             }
@@ -1689,23 +1791,121 @@ public class AppOperateServlet extends HttpServlet {
             json = Units.objectToJson(-1, "输入参数错误!", e.toString());
         }
 
-//        System.out.println(response.toString());
+        //System.out.println("json:" + json);
         PrintWriter out = response.getWriter();
         try {
             response.setContentType("text/html;charset=UTF-8");
             response.setHeader("Cache-Control", "no-store");
             response.setHeader("Pragma", "no-cache");
             response.setDateHeader("Expires", 0);
-            if (DESFlag) {
-                out.print(EncryptUtil.encryptDES(json));
+            if (subUri.compareTo("getNewestVersion") == 0) {
+                out.print(EncryptUtil.encryptDES(json, null));
+                //System.out.println(EncryptUtil.encryptDES(json, null));
             } else {
-                out.print(json);
+                out.print(EncryptUtil.encryptDES(json, "900819ye"));
+                //System.out.println(EncryptUtil.encryptDES(json, "900819ye"));
             }
         } finally {
             if (out != null) {
                 out.close();
             }
         }
+    }
+
+    /**
+     * 同一个IP访问同一个接口, 间隔时间不能小于最小时间限制
+     *
+     * @param ipAddress
+     * @param interfaceName
+     * @return
+     * @throws Exception
+     */
+    private boolean isFrequencyCanAccess(String ipAddress, String interfaceName) throws Exception {
+        String existStr = RedisAPI.get("frequency_" + ipAddress + "_" + interfaceName);
+        if (null != existStr && existStr.length() > 0) {
+            AccessFrequency exitsFrequency = JSONObject.parseObject(existStr, AccessFrequency.class);
+            long nowTime = new Date().getTime();
+            Date lastAccessTime = new Date(exitsFrequency.getAccessTime());
+
+            exitsFrequency.setAccessTime(nowTime);
+            if (nowTime - lastAccessTime.getTime() < minLimitTime) {
+                //如果同一个已存在的IP上次访问同一个接口的时间小于最小时间限制
+                LOG.info("丢掉" + ipAddress + "对接口" + interfaceName + "的访问");
+                RedisAPI.set("frequency_" + ipAddress + "_" + interfaceName, JSONObject.toJSONString(exitsFrequency));
+                return false;
+            }
+
+            RedisAPI.set("frequency_" + ipAddress + "_" + interfaceName, JSONObject.toJSONString(exitsFrequency));
+
+        } else {
+            AccessFrequency frequency = new AccessFrequency();
+            frequency.setIpAddress(ipAddress);
+            frequency.setAccessTime(new Date().getTime());
+            frequency.setOverLimitcount(0);
+            frequency.setIpChangeTimes(0);
+            frequency.setIsEnable(true);
+            frequency.setInterfaceName(interfaceName);
+
+            RedisAPI.set("frequency_" + ipAddress + "_" + interfaceName, JSONObject.toJSONString(frequency));
+        }
+        return true;
+    }
+
+    /**
+     * 同一个设备号, 切换IP次数超过限制
+     *
+     * @param imei
+     * @param ipAddress
+     * @return
+     */
+    private boolean checkIpAddressChangeTimes(String imei, String ipAddress) {
+        if (imei == null || imei.length() <= 0) {
+            return false;
+        }
+        String existStr = RedisAPI.get(imei);
+        long nowTime = new Date().getTime();
+        if (null != existStr && existStr.length() > 0) {
+            DeviceIpAddress address = JSONObject.parseObject(existStr, DeviceIpAddress.class);
+            Date lastAccessTime = new Date(address.getLastAccessTime());
+            address.setLastAccessTime(nowTime);
+
+            if (address.isIsEnabled()) {
+                if (!Units.isToday(lastAccessTime)) {
+                    address.setChangeTime(0);
+                }
+                if (address.getIpAddress().compareTo(ipAddress) != 0) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    String timeString = formatter.format(nowTime);
+                    RedisAPI.setList(imei + "_record", "changeTime:" + timeString + ",ipAddress:" + ipAddress);
+                    address.setChangeTime(address.getChangeTime() + 1);
+                    address.setIpAddress(ipAddress);
+                }
+                if (address.getChangeTime() > changeTimes) {
+                    address.setIsEnabled(false);
+                    RedisAPI.set(imei, JSONObject.toJSONString(address));
+                    LOG.info("禁用设备" + imei + "的访问");
+                    return false;
+                }
+                RedisAPI.set(imei, JSONObject.toJSONString(address));
+            } else {
+                if (address.getIpAddress().compareTo(ipAddress) != 0) {
+                    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    String timeString = formatter.format(nowTime);
+                    RedisAPI.setList(imei + "_record", "changeTime:" + timeString + ",ipAddress:" + ipAddress);
+                }
+                LOG.info("禁用设备" + imei + "的访问");
+                return false;
+            }
+        } else {
+            DeviceIpAddress address = new DeviceIpAddress();
+            address.setImei(imei);
+            address.setIpAddress(ipAddress);
+            address.setLastAccessTime(nowTime);
+            address.setChangeTime(0);
+            address.setIsEnabled(true);
+            RedisAPI.set(imei, JSONObject.toJSONString(address));
+        }
+        return true;
     }
 
     /**
@@ -1727,15 +1927,11 @@ public class AppOperateServlet extends HttpServlet {
         return null;
     }
 
-    private boolean isCanAccess(String hostIP, String interfaceName) {
-
-        return false;
-    }
-
-    private AccessFrequency isHasHostIP(String hostIP, List<AccessFrequency> desList) {
+    private AccessFrequency isHasHostIP(String hostIP, String interfaceName, List<AccessFrequency> desList) {
         for (AccessFrequency frequency : desList) {
 //            System.out.println("ip:" + frequency.getIpAddress() + ",count:" + frequency.getOverLimitcount() + ",time:" + frequency.getAccessTime());
-            if (frequency.getIpAddress().compareTo(hostIP) == 0) {
+            if (frequency.getIpAddress().compareTo(hostIP) == 0
+                    && frequency.getInterfaceName().compareTo(interfaceName) == 0) {
                 return frequency;
             }
         }

@@ -548,6 +548,23 @@ public class PCOperateServlet extends HttpServlet {
                     break;
                 }
                 //</editor-fold>
+                //<editor-fold defaultstate="collapsed" desc="updateCarTableUseStatus">
+                case "updateCarTableUseStatus": {
+                    int carID = Integer.valueOf((null != paramsJson.getString("carID")) ? paramsJson.getString("carID") : "-1");
+                    //0 -- 启用 | 1 -- 禁用
+                    int useStatus = Integer.valueOf((null != paramsJson.getString("useStatus")) ? paramsJson.getString("useStatus") : "0");
+                    CarTableController controller = new CarTableController();
+                    int result = controller.updateCarUseStatus(carID, useStatus);
+                    String message;
+                    if (result == 0) {
+                        message = "更新成功!";
+                    } else {
+                        message = "更新失败!";
+                    }
+                    json = Units.objectToJson(result, message, null);
+                    break;
+                }
+                //</editor-fold>
 
                 /**
                  * *******************************地点************************************
@@ -650,6 +667,8 @@ public class PCOperateServlet extends HttpServlet {
                     String destinationDis = paramsJson.getString("destinationDis");
                     String distributorContact = paramsJson.getString("distributorContact");
                     String distributorPhoneNum = paramsJson.getString("distributorPhoneNum");
+                    //发送时间
+                    String sendTime = paramsJson.getString("sendTime");
 
                     OrderTableController controller = new OrderTableController();
                     OrderAddResult result = controller.taskAdd(null, isMixed, priceModel, price, taxRate, pickupType, timeCountDown, taskType, startPlace, endPlace,
@@ -936,7 +955,7 @@ public class PCOperateServlet extends HttpServlet {
                 /**
                  * *******************************返回门岗列表************************************
                  */
-                //<editor-fold defaultstate="collapsed" desc="getDestinationDis">
+                //<editor-fold defaultstate="collapsed" desc="getGateSentry">
                 case "getGateSentry": {
                     GateSentryController controller = new GateSentryController();
                     ArrayList<GateSentry> result = controller.getGateSentryList();

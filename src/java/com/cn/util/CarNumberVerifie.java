@@ -6,8 +6,6 @@
 package com.cn.util;
 
 import com.cn.webService.client.GpsWebService;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 
 /**
@@ -97,16 +95,10 @@ public class CarNumberVerifie {
         return new GpsWebService().getGpsWebServiceSoap().vehnofVerifie(paramValue);
     }
     
-    /*
-    public static void main(String[] args) {
-        try {
-            String test = "FbK4Ezk6mad8qPV3GUxF0wjp+jVsrjyhY+eb7Gy675WT58nug5deBDeqz2ss45FV3jaWkX5koFN6Ikr9Cx+XZprhAb2V2uCLicHVbcHFjkntbd2JyIlYL23G5PdqWJh1Lt/MMbwpBB5TVkFmtAOQzuPIb+D33aAtEpghcbQN6XniHfXSL7SxyaGqibMgbqZHLwiQamVnPOmuR/Fp+nMQdCtbhTm0FigyY2h7dH9IQJJSf5mfv/KU5A==";
-//            String test = "{\"username\":\"a33102a234ee7072269d3206b8618c69\",\"password\":\"e10adc3949ba59abbe56e057f20f883e\",\"type\":\"enterprise\",\"IMEI\":\"102AF67CA6D24B3C8EF991FBD9306BFE\"}";
-            System.out.println(EncryptUtil.decryptDES(test));
-        } catch (Exception ex) {
-            Logger.getLogger(CarNumberVerifie.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    */
     
+    public static void main(String[] args) {
+        /*
+        System.out.println(vehnofVerifie("陕KC6064"));
+        */
+    }    
 }

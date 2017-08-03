@@ -47,7 +47,9 @@ public class SendDownOrder implements Runnable {
         OrderTable order = tableController.getTaskDetailWithSerial(this.taskSerial, -1);
 
         if (null != order) {
-            /************验证订单是否是今天下发*************/
+            /**
+             * **********验证订单是否是今天下发************
+             */
             SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
             try {
                 Date sendTime = df.parse(order.getSendTime());
@@ -61,16 +63,18 @@ public class SendDownOrder implements Runnable {
                 controller.shutdownTimerTask(taskSerial);
                 return;
             }
-            /************验证订单是否是今天下发*************/
-            
+            /**
+             * **********验证订单是否是今天下发************
+             */
+
             OrderGrabController grabController = new OrderGrabController();
             grabController.updateOrderEndTime(order.getTaskID());//更新订单结束时间
-            
+
             //<editor-fold defaultstate="collapsed" desc="定价处理">
             if (order.getPriceModel() == 1) {
                 int orderCompleteStatus = grabController.orderGrabIsComplete(order.getTaskID());
                 LOG.info(taskSerial + ", orderCompleteStatus:" + orderCompleteStatus);
-                
+
                 if (orderCompleteStatus == 0) {
                     LOG.info("定价抢单完成");
                     controller.shutdownTimerTask(taskSerial);
@@ -79,17 +83,19 @@ public class SendDownOrder implements Runnable {
                     jsonObject.addProperty("taskSerial", order.getTaskSerial());
 //                    PushUnits.pushNotifation("enterprise_debug", "有新的可抢订单", "newOrder", jsonObject);
 //                    PushUnits.pushNotifation("enterprise_release", "有新的可抢订单", "newOrder", jsonObject);
-                    
+
                     LoginUserController userController = new LoginUserController();
                     ArrayList<LoginUser> list = userController.getCanUseUserList();
                     System.out.println("user size:" + list.size());
-                    
+
                     HashSet<String> userImeiList = new HashSet<>();
                     int count = 0;
                     for (LoginUser user : list) {
                         if (count < 500) {
-                            userImeiList.add(user.getImei());
-                            count ++;
+                            if (user.getImei() != null) {
+                                userImeiList.add(user.getImei());
+                                count++;
+                            }
                         } else {
                             PushUnits.pushNotifationWithAlias(userImeiList, "有新的可抢订单", "newOrder", jsonObject);
                             count = 0;
@@ -126,13 +132,13 @@ public class SendDownOrder implements Runnable {
                     LoginUserController userController = new LoginUserController();
                     ArrayList<LoginUser> list = userController.getCanUseUserList();
                     System.out.println("user size:" + list.size());
-                    
+
                     HashSet<String> userImeiList = new HashSet<>();
                     int count = 0;
                     for (LoginUser user : list) {
                         if (count < 500) {
                             userImeiList.add(user.getImei());
-                            count ++;
+                            count++;
                         } else {
                             PushUnits.pushNotifationWithAlias(userImeiList, "有新的可抢订单", "newOrder", jsonObject);
                             count = 0;
@@ -151,7 +157,7 @@ public class SendDownOrder implements Runnable {
                 controller.shutdownTimerTask(taskSerial);
             }
             //</editor-fold>
-            
+
         } else {
             LOG.info("订单不存在了!");
             controller.shutdownTimerTask(taskSerial);

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Context path="/ZhongYangSteel">
-<!--    
-    <Resource
-        name="testDBSource"
+    
+<!--    <Resource
+        name="jdbc/zcdb"
         type="javax.sql.DataSource"
-        driverClassName="com.mysql.jdbc.Driver"  
         maxIdle="20"
         maxWait="5000"
-        username="root"
-        password="900819_Ye"  
-        url="jdbc:mysql://localhost:3306/zg"  
+        username="zgwl"
+        password="zgwl"
+        driverClassName="com.mysql.jdbc.Driver"
+        url="jdbc:wl.txun.com.cn://localhost:3306/zg"  
         maxActive="30">
     </Resource>-->
     

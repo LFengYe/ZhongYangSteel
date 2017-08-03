@@ -17,6 +17,8 @@ public class AccessFrequency {
     private int overLimitcount;//超过限制次数
     private boolean isEnable;//是否可用
     private String interfaceName;//接口名称
+    private String imei;
+    private int ipChangeTimes;
 
     public String getIpAddress() {
         return ipAddress;
@@ -72,6 +74,22 @@ public class AccessFrequency {
 
     public void setInterfaceName(String interfaceName) {
         this.interfaceName = interfaceName;
+    }
+
+    public String getImei() {
+        return imei;
+    }
+
+    public void setImei(String imei) {
+        this.imei = imei;
+    }
+
+    public int getIpChangeTimes() {
+        return ipChangeTimes;
+    }
+
+    public void setIpChangeTimes(int ipChangeTimes) {
+        this.ipChangeTimes = ipChangeTimes;
     }
     
 }
