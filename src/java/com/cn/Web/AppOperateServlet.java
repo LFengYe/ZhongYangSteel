@@ -161,7 +161,7 @@ public class AppOperateServlet extends HttpServlet {
                 DESFlag = false;
             }
             
-            System.out.println(subUri + ", params is:" + paramsJson);
+            //System.out.println(subUri + ", params is:" + paramsJson);
 
             if (paramsJson == null) {
                 json = Units.objectToJson(-1, "输入参数错误!", null);
@@ -188,7 +188,7 @@ public class AppOperateServlet extends HttpServlet {
             //设备识别号
             String imei = paramsJson.getString("IMEI");
 
-            if (subUri.compareTo("getNewestVersion") != 0 && !isFrequencyCanAccess(ipAddress, subUri)) {
+            if (!isFrequencyCanAccess(ipAddress, subUri)) {
                 json = Units.objectToJson(-1, "请勿频繁刷新!", null);
                 PrintWriter out = response.getWriter();
                 try {
@@ -209,7 +209,7 @@ public class AppOperateServlet extends HttpServlet {
                 return;
             }
 
-            if (!checkIpAddressChangeTimes(imei, ipAddress)) {
+            if (subUri.compareTo("getNewestVersion") != 0 && !checkIpAddressChangeTimes(imei, ipAddress)) {
                 json = Units.objectToJson(-1, "设备访问受限!", null);
                 PrintWriter out = response.getWriter();
                 try {
@@ -860,7 +860,8 @@ public class AppOperateServlet extends HttpServlet {
                     if (!StringUtils.isEmptyOrWhitespaceOnly(phoneNum)) {
                         Calendar calendar = Calendar.getInstance();
                         int hour = calendar.get(Calendar.HOUR_OF_DAY);
-                        if (hour >= 20) {
+                        List deviceList = RedisAPI.getList("deviceList");
+                        if (deviceList.contains(EncryptUtil.encryptDES(phoneNum, "device01"))) {
                             String phoneCode = Units.createOnlyNumPhoneValidateCode(4);
                             json = Units.sendSMSVerificationCode(phoneNum, phoneCode, Constants.SMS_PLATFORM_NEW_DEVICE_TEMPLATE_ID, Constants.SMS_NEW_DEVICE_EXPIRED_MINUTE);
                             if (session == null) {
@@ -869,7 +870,7 @@ public class AppOperateServlet extends HttpServlet {
                             session.setAttribute("phoneCode", phoneCode);
                             session.setMaxInactiveInterval(120 * 60);
                         } else {
-                            json = Units.objectToJson(-1, "请在21:00之后切换设备", null);
+                            json = Units.objectToJson(-1, "请提交设备切换申请!", null);
                         }
                     } else {
                         json = Units.objectToJson(-1, "手机号不能为空", null);

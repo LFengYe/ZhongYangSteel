@@ -95,10 +95,10 @@ public class CarNumberVerifie {
         return new GpsWebService().getGpsWebServiceSoap().vehnofVerifie(paramValue);
     }
     
-    
+    /*
     public static void main(String[] args) {
-        /*
+        
         System.out.println(vehnofVerifie("陕KC6064"));
-        */
-    }    
+        
+    }   */ 
 }

@@ -404,7 +404,7 @@ public class CharactorFilter implements Filter {
         for (int i = 1; i < list.size(); i++) {
             dataList[i - 1] = Double.valueOf(list.get(i));
         }
-        return Units.StandardDiviation(dataList) < setCountLimit;
+        return Units.StandardDiviation(dataList) > setCountLimit;
     }
 
     private AccessFrequency isHasHostIP(String hostIP, String interfaceName, List<AccessFrequency> desList) {

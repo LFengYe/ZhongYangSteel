@@ -7,7 +7,6 @@ package com.cn.util;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -21,13 +20,14 @@ import redis.clients.jedis.JedisPoolConfig;
  * @author LFeng
  */
 public class RedisAPI {
+
     protected static final org.slf4j.Logger LOG = LoggerFactory.getLogger(RedisAPI.class);
     private static JedisPool jedisPool = null;
     private static final String encordPassword = "Ty558168";
-    
+
     /**
      * 构建redis连接池
-     * 
+     *
      * @param ip
      * @param port
      * @return JedisPool
@@ -48,11 +48,11 @@ public class RedisAPI {
         }
         return jedisPool;
     }
-    
+
     /**
      * 返还到连接池
-     * 
-     * @param pool 
+     *
+     * @param pool
      * @param redis
      */
     private static void returnResource(JedisPool pool, Jedis redis) {
@@ -60,7 +60,7 @@ public class RedisAPI {
             pool.returnResource(redis);
         }
     }
-    
+
     public static Long delKey(String key) {
         try {
             Properties prop = new Properties();
@@ -73,8 +73,9 @@ public class RedisAPI {
                 return jedis.del(key);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
@@ -85,8 +86,8 @@ public class RedisAPI {
         }
         return null;
     }
-    
-    public static Set<String> getKeys(String pattern){
+
+    public static Set<String> getKeys(String pattern) {
         try {
             Properties prop = new Properties();
             prop.load(RedisAPI.class.getClassLoader().getResourceAsStream("./config.properties"));
@@ -98,8 +99,9 @@ public class RedisAPI {
                 return jedis.keys(pattern);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
@@ -110,14 +112,14 @@ public class RedisAPI {
         }
         return null;
     }
-    
+
     /**
      * 获取数据
-     * 
+     *
      * @param key
      * @return
      */
-    public static String get(String key){
+    public static String get(String key) {
         try {
             Properties prop = new Properties();
             prop.load(RedisAPI.class.getClassLoader().getResourceAsStream("./config.properties"));
@@ -130,8 +132,9 @@ public class RedisAPI {
                 value = jedis.get(key);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
@@ -143,7 +146,7 @@ public class RedisAPI {
         }
         return null;
     }
-    
+
     public static String set(String key, String value) {
         try {
             Properties prop = new Properties();
@@ -156,8 +159,9 @@ public class RedisAPI {
                 return jedis.set(key, value);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis写入出错", e);
             } finally {
                 //返还到连接池
@@ -168,7 +172,7 @@ public class RedisAPI {
         }
         return null;
     }
-    
+
     public static Long setList(String key, String value) {
         try {
             Properties prop = new Properties();
@@ -181,8 +185,9 @@ public class RedisAPI {
                 return jedis.rpush(key, value);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis写入出错", e);
             } finally {
                 //返还到连接池
@@ -193,7 +198,7 @@ public class RedisAPI {
         }
         return null;
     }
-    
+
     public static String setList(String key, long index, String value) {
         try {
             Properties prop = new Properties();
@@ -206,8 +211,9 @@ public class RedisAPI {
                 return jedis.lset(key, index, value);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis写入出错", e);
             } finally {
                 //返还到连接池
@@ -218,8 +224,8 @@ public class RedisAPI {
         }
         return null;
     }
-    
-    public static List<String> getList(String key){
+
+    public static List<String> getList(String key) {
         try {
             Properties prop = new Properties();
             prop.load(RedisAPI.class.getClassLoader().getResourceAsStream("./config.properties"));
@@ -232,8 +238,9 @@ public class RedisAPI {
                 value = jedis.lrange(key, 0, -1);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
@@ -245,8 +252,8 @@ public class RedisAPI {
         }
         return null;
     }
-    
-    public static String getList(String key, long index){
+
+    public static String getList(String key, long index) {
         try {
             Properties prop = new Properties();
             prop.load(RedisAPI.class.getClassLoader().getResourceAsStream("./config.properties"));
@@ -259,8 +266,9 @@ public class RedisAPI {
                 value = jedis.lindex(key, index);
             } catch (Exception e) {
                 //释放redis对象
-                if (null != pool)
+                if (null != pool) {
                     pool.returnBrokenResource(jedis);
+                }
                 LOG.error("Redis读取出错", e);
             } finally {
                 //返还到连接池
@@ -272,17 +280,19 @@ public class RedisAPI {
         }
         return null;
     }
-    
+
     public static void main(String[] args) {
         /*
-        List<String> list = RedisAPI.getList("171.124.252.239");
+        List<String> list = RedisAPI.getList("223.104.14.108");
         System.out.println(Arrays.toString(list.toArray()));
         double[] dataList = new double[list.size() - 1];
         for (int i = 1; i < list.size(); i++) {
             dataList[i - 1] = Double.valueOf(list.get(i));
         }
         System.out.println(Units.StandardDiviation(dataList));
-        */
+         */
+ /*
+        //获取当前
         Set<String> keys = RedisAPI.getKeys("*record");
         Iterator<String> iterator = keys.iterator();
         while (iterator.hasNext()) {
@@ -292,6 +302,14 @@ public class RedisAPI {
             System.out.println("imei:" + key.substring(0, key.length() - 7));
             System.out.println("imei value:" + RedisAPI.get(key.substring(0, key.length() - 7)));
         }
+         */
+        List deviceList = RedisAPI.getList("deviceList");
+        String imei = "123435345435";
+        if (deviceList.contains(EncryptUtil.encryptDES(imei, "device01"))) {
+            System.out.println(Arrays.toString(deviceList.toArray()));
+        } else {
+            System.out.println("请提交设备切换申请");
+        }
     }
-    
+
 }
